@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#3B82F6">
+  <title>Крестики-Нолики</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --tg-theme-bg-color: #ffffff;
+      --tg-theme-text-color: #000000;
+      --tg-theme-hint-color: #777777;
+      --tg-theme-button-color: #3B82F6;
+      --tg-theme-button-text-color: #ffffff;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    body {
+      background-color: var(--tg-theme-bg-color);
+      color: var(--tg-theme-text-color);
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    
+    .header {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+    
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .subtitle {
+      color: var(--tg-theme-hint-color);
+      font-size: 16px;
+    }
+    
+    .game-container {
+      background: rgba(0,0,0,0.03);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .status {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #3B82F6;
+    }
+    
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .cell {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border: 2px solid #e5e5e5;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .cell:hover {
+      background: #f0f9ff;
+      transform: scale(1.02);
+    }
+    
+    .cell.x {
+      color: #3B82F6;
+    }
+    
+    .cell.o {
+      color: #EF4444;
+    }
+    
+    .cell.disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    
+    .score {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .score-item {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.03);
+      width: 30%;
+    }
+    
+    .score-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    .score-label {
+      font-size: 14px;
+      color: var(--tg-theme-hint-color);
+    }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: var(--tg-theme-button-color, #3B82F6);
+      color: var(--tg-theme-button-text-color, white);
+      text-align: center;
+      border-radius: 12px;
+      font-weight: bold;
+      text-decoration: none;
+      margin: 10px 0;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    
+    .btn.secondary {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3B82F6;
+    }
+    
+    .win-animation {
+      animation: pulse 0.5s ease-in-out;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .footer {
+      text-align: center;
+      padding: 20px 0;
+      color: var(--tg-theme-hint-color);
+      font-size: 14px;
+    }
+    
+    @media (max-width: 480px) {
+      .cell {
+        width: 70px;
+        height: 70px;
+        font-size: 32px;
+      }
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --tg-theme-bg-color: #1c1c1e;
+        --tg-theme-text-color: #ffffff;
+        --tg-theme-hint-color: #a1a1a6;
+      }
+      
+      .game-container, .score-item {
+        background: rgba(255,255,255,0.05);
+      }
+      
+      .cell {
+        background: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.1);
+      }
+      
+      .cell:hover {
+        background: rgba(255,255,255,0.1);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">Крестики-Нолики</h1>
+      <p class="subtitle">Сыграйте партию с другом</p>
+    </div>
+    
+    <div class="game-container">
+      <div class="status" id="status">Ход: X</div>
+      
+      <div class="board" id="board">
+        <div class="cell" data-cell-index="0"></div>
+        <div class="cell" data-cell-index="1"></div>
+        <div class="cell" data-cell-index="2"></div>
+        <div class="cell" data-cell-index="3"></div>
+        <div class="cell" data-cell-index="4"></div>
+        <div class="cell" data-cell-index="5"></div>
+        <div class="cell" data-cell-index="6"></div>
+        <div class="cell" data-cell-index="7"></div>
+        <div class="cell" data-cell-index="8"></div>
+      </div>
+      
+      <div class="score">
+        <div class="score-item">
+          <div class="score-value" id="x-score">0</div>
+          <div class="score-label">X</div>
+        </div>
+        <div class="score-item">
+          <div class="score-value" id="draws">0</div>
+          <div class="score-label">Ничьи</div>
+        </div>
+        <div class="score-item">
+          <div class="score-value" id="o-score">0</div>
+          <div class="score-label">O</div>
+        </div>
+      </div>
+      
+      <button class="btn" id="restartBtn">Новая игра</button>
+      <button class="btn secondary" id="shareBtn">Поделиться с друзьями</button>
+    </div>
+    
+    <div class="footer">
+      <p>© 2023 Мини-игры в Telegram</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const tg = window.Telegram?.WebApp;
+      
+      if (tg) {
+        tg.expand();
+        tg.ready();
+        
+        // Настройка цветов под тему Telegram
+        const themeParams = tg.themeParams;
+        if (themeParams) {
+          document.documentElement.style.setProperty('--tg-theme-bg-color', themeParams.bg_color || '#ffffff');
+          document.documentElement.style.setProperty('--tg-theme-text-color', themeParams.text_color || '#000000');
+          document.documentElement.style.setProperty('--tg-theme-hint-color', themeParams.hint_color || '#777777');
+          document.documentElement.style.setProperty('--tg-theme-button-color', themeParams.button_color || '#3B82F6');
+          document.documentElement.style.setProperty('--tg-theme-button-text-color', themeParams.button_text_color || '#ffffff');
+        }
+        
+        // Кнопка "Назад"
+        tg.BackButton.show();
+        tg.BackButton.onClick(function() {
+          tg.close();
+        });
+      }
+      
+      // Игровая логика
+      const statusDisplay = document.getElementById('status');
+      const cells = document.querySelectorAll('.cell');
+      const restartButton = document.getElementById('restartBtn');
+      const shareButton = document.getElementById('shareBtn');
+      const xScoreDisplay = document.getElementById('x-score');
+      const oScoreDisplay = document.getElementById('o-score');
+      const drawsDisplay = document.getElementById('draws');
+      
+      let gameActive = true;
+      let currentPlayer = "X";
+      let gameState = ["", "", "", "", "", "", "", "", ""];
+      let scores = { X: 0, O: 0, draws: 0 };
+      
+      const winningConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтали
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикали
+        [0, 4, 8], [2, 4, 6]             // диагонали
+      ];
+      
+      function handleCellClick(clickedCellEvent) {
+        const clickedCell = clickedCellEvent.target;
+        const clickedCellIndex = parseInt(clickedCell.getAttribute('data-cell-index'));
+        
+        if (gameState[clickedCellIndex] !== "" || !gameActive) {
+          return;
+        }
+        
+        handleCellPlayed(clickedCell, clickedCellIndex);
+        handleResultValidation();
+      }
+      
+      function handleCellPlayed(clickedCell, clickedCellIndex) {
+        gameState[clickedCellIndex] = currentPlayer;
+        clickedCell.textContent = currentPlayer;
+        clickedCell.classList.add(currentPlayer.toLowerCase());
+        clickedCell.classList.add('win-animation');
+        
+        setTimeout(() => {
+          clickedCell.classList.remove('win-animation');
+        }, 500);
+      }
+      
+      function handleResultValidation() {
+        let roundWon = false;
+        for (let i = 0; i < winningConditions.length; i++) {
+          const [a, b, c] = winningConditions[i];
+          const condition = gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c];
+          
+          if (condition) {
+            roundWon = true;
+            highlightWinningCells([a, b, c]);
+            break;
+          }
+        }
+        
+        if (roundWon) {
+          statusDisplay.textContent = `Игрок ${currentPlayer} победил!`;
+          statusDisplay.style.color = currentPlayer === 'X' ? '#3B82F6' : '#EF4444';
+          gameActive = false;
+          updateScore(currentPlayer);
+          return;
+        }
+        
+        const roundDraw = !gameState.includes("");
+        if (roundDraw) {
+          statusDisplay.textContent = 'Ничья!';
+          statusDisplay.style.color = '#6B7280';
+          gameActive = false;
+          updateScore('draws');
+          return;
+        }
+        
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        statusDisplay.textContent = `Ход: ${currentPlayer}`;
+        statusDisplay.style.color = currentPlayer === 'X' ? '#3B82F6' : '#EF4444';
+      }
+      
+      function highlightWinningCells(cells) {
+        cells.forEach(index => {
+          document.querySelector(`[data-cell-index="${index}"]`).style.background = 'rgba(59, 130, 246, 0.2)';
+        });
+      }
+      
+      function updateScore(winner) {
+        scores[winner]++;
+        xScoreDisplay.textContent = scores.X;
+        oScoreDisplay.textContent = scores.O;
+        drawsDisplay.textContent = scores.draws;
+      }
+      
+      function handleRestartGame() {
+        gameActive = true;
+        currentPlayer = "X";
+        gameState = ["", "", "", "", "", "", "", "", ""];
+        statusDisplay.textContent = `Ход: ${currentPlayer}`;
+        statusDisplay.style.color = '#3B82F6';
+        
+        cells.forEach(cell => {
+          cell.textContent = "";
+          cell.classList.remove('x', 'o');
+          cell.style.background = '';
+        });
+      }
+      
+      function handleShareGame() {
+        const message = `🎮 Приглашаю сыграть в крестики-нолики!\n\nСыграйте со мной в эту мини-игру: ${window.location.href}`;
+        
+        if (tg) {
+          tg.shareToStory(message);
+        } else {
+          navigator.clipboard.writeText(message).then(() => {
+            alert('Ссылка скопирована! Отправьте её друзьям.');
+          });
+        }
+      }
+      
+      // Обработчики событий
+      cells.forEach(cell => {
+        cell.addEventListener('click', handleCellClick);
+      });
+      
+      restartButton.addEventListener('click', handleRestartGame);
+      shareButton.addEventListener('click', handleShareGame);
+      
+      // Инициализация
+      handleRestartGame();
+    });
+  </script>
+</body>
+</html>
